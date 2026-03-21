@@ -1,7 +1,7 @@
 name: midi_device_service
 description: A production-grade Flutter plugin for real-time MIDI input via USB and Bluetooth Low Energy (BLE) on Android. Built on android.media.midi for minimal latency.
 version: 1.0.0
-homepage: https://github.com/pianopilot/midi_device_service
+homepage: https://github.com/CallofCoding/midi_device_service.git
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
