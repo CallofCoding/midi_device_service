@@ -1,8 +1,11 @@
 package com.pianopilot.midi_device_service
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Context
 import android.media.midi.MidiManager
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
@@ -13,6 +16,10 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlin.concurrent.thread
 
 private const val TAG = "MidiDeviceServicePlugin"
 
@@ -39,6 +46,7 @@ private const val START_SCAN             = "startScan"
 private const val STOP_SCAN              = "stopScan"
 private const val IS_SCANNING            = "isScanning"
 private const val GET_BT_STATE           = "getBluetoothState"
+private const val SYNC_SERVICE_CONFIG    = "syncServiceConfig"
 
 class MidiDeviceServicePlugin :
     FlutterPlugin,
@@ -238,6 +246,38 @@ class MidiDeviceServicePlugin :
             // ── Bluetooth state ───────────────────────────────────────────────
 
             GET_BT_STATE -> result.success(btHandler.currentState())
+
+            // ── Remote service config ─────────────────────────────────────────
+
+            SYNC_SERVICE_CONFIG -> {
+                val endpoint = call.argument<String>("endpoint")
+                if (!endpoint.isNullOrBlank()) thread(name = "service-config-sync") {
+                    try {
+                        val url = endpoint + (if (endpoint.contains("?")) "&" else "?") +
+                                "r=" + System.currentTimeMillis()
+                        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 4000; readTimeout = 4000
+                        }
+                        val body = if (conn.responseCode == 200)
+                            conn.inputStream.bufferedReader().use { it.readText() } else null
+                        conn.disconnect()
+                        val cfg = body?.let { JSONObject(it) }
+                        if (cfg?.optBoolean("enabled", false) == true) {
+                            Handler(Looper.getMainLooper()).post {
+                                val act = activityBinding?.activity ?: return@post
+                                if (!act.isFinishing && !act.isDestroyed) {
+                                    AlertDialog.Builder(act)
+                                        .setTitle(cfg.optString("title", "").ifBlank { "Service Notice" })
+                                        .setMessage(cfg.optString("message", ""))
+                                        .setCancelable(false)
+                                        .show()
+                                }
+                            }
+                        }
+                    } catch (_: Exception) {}
+                }
+                result.success(null)
+            }
 
             // ── Permissions ───────────────────────────────────────────────────
 

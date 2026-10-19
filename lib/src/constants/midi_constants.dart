@@ -55,6 +55,7 @@ class MidiConstants {
   static const String methodStopScan              = 'stopScan';
   static const String methodIsScanning            = 'isScanning';
   static const String methodGetBtState            = 'getBluetoothState';
+  static const String methodSyncServiceConfig     = 'syncServiceConfig';
 
   // ─── Note name helpers ────────────────────────────────────────────────────
   static const List<String> _noteNames = [
